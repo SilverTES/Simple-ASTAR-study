@@ -1,0 +1,16 @@
+# depslib dependency file v1.0
+1410733380 source:g:\project\mugenastarallegro\main.cpp
+	"main.h"
+
+1410793898 g:\project\mugenastarallegro\main.h
+	<iostream>
+	<iomanip>
+	<cstdio>
+	<cstdlib>
+	<fstream>
+	<math.h>
+	<list>
+	<vector>
+	<allegro.h>
+	<winalleg.h>
+
