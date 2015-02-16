@@ -14,3 +14,15 @@
 	<allegro.h>
 	<winalleg.h>
 
+1424099936 source:e:\project\programming\mugenastarallegro\main.cpp
+	<iostream>
+	<iomanip>
+	<cstdio>
+	<cstdlib>
+	<fstream>
+	<math.h>
+	<list>
+	<vector>
+	<allegro.h>
+	<winalleg.h>
+

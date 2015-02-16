@@ -20,7 +20,7 @@ const int SCRY(600);
 
 const int MAPW(40);
 const int MAPH(30);
-const int cs = 20; // Taille des cases
+const int cs = 40; // Taille des cases
 
 struct Node
 {
@@ -76,9 +76,9 @@ bool map_walkable(int x, int y)
     return false;
 }
 
-int ManhattanDistance(int px, int py, int goalX, int goalY)
+int Distance(int px, int py, int goalX, int goalY)
 {
-    return fabs(px - goalX) + fabs(py - goalY);
+    return abs(px - goalX) + abs(py - goalY);
 }
 /*
 bool FindPath (int startX, int startY, int goalX, int goalY, vector<Node> &path)
@@ -163,8 +163,8 @@ int main(void)
     depx = 2;
     depy = 2;
 
-    arrx = 37;
-    arry = 27;
+    arrx = 18;
+    arry = 13;
 
     list <Node> openNode;
     Node current(depx,depy);
@@ -211,7 +211,7 @@ int main(void)
                         pNode.x = current.x + x;
                         pNode.y = current.y + y;
                         if (x==0 || y==0) pNode.g = 10; else pNode.g = 14;
-                        pNode.h = ManhattanDistance(pNode.x, pNode.y, arrx, arry);
+                        pNode.h = Distance(pNode.x, pNode.y, arrx, arry);
                         pNode.f = pNode.g + pNode.h;
 
                         openNode.push_back(pNode);
@@ -271,9 +271,14 @@ int main(void)
             int px = (*it).x;
             int py = (*it).y;
             int f  = (*it).f;
+            int g  = (*it).g;
+            int h  = (*it).h;
 
-            rectfill (buffer, px*cs,py*cs,px*cs+cs,py*cs+cs,makecol(250,150,0));
-            textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,0),-1,"%i",f);
+            rectfill (buffer, px*cs,py*cs,px*cs+cs,py*cs+cs,makecol(0,200,10));
+            textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,0),-1,"(%i)",f);
+            textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(255,100,0),-1,"%i",g);
+            textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(255,0,100),-1,"%i",h);
+
         }
 
         draw_map();
@@ -287,6 +292,8 @@ int main(void)
 
         line(buffer, mouse_x, mouse_y-10, mouse_x, mouse_y+10, makecol(200,150,0));
         line(buffer, mouse_x-10, mouse_y, mouse_x+10, mouse_y, makecol(200,150,0));
+
+        textprintf_ex (buffer, font, mouse_x+2, mouse_y+2,makecol(55,250,250),-1,"%d",Distance(posx/cs, posy/cs, arrx, arry));
 
         //int n(0);
         //textprintf_ex (buffer, font, 1, 1, -1, makecol(255,255,0), "-- Search Mode -- %i",n);
