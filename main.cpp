@@ -32,7 +32,7 @@ struct Node
     int f;
     int parentX;
     int parentY;
-    Node * parent;
+    const struct Node * parent;
 };
 
 struct f_comp
@@ -47,6 +47,7 @@ struct Vec2D
 {
     int x;
     int y;
+    //int cost; // Add for optimize the algorithm 10,14,10,14,..
 };
 
 Vec2D adj[8];
@@ -77,7 +78,7 @@ ofstream saveFile;
 
 vector <Node> openNode;
 vector <Node> closedNode;
-vector <Node> goalPath;
+vector <Vec2D> myPath;
 vector <Node>::iterator it;
 
 void draw_map();
@@ -199,6 +200,8 @@ int main(void)
 
     openNode.push_back(current);
 
+    bool trace = false;
+
     while (!quit)
     {
 
@@ -237,28 +240,30 @@ int main(void)
                 noSolution = true;
             }
 
-
-            // Trier openNode !
-            if (openNode.size()>1) sort(openNode.begin(),openNode.end(), f_comp());
-
             // cherche le F le plus faible !
 
-            //current = *min_element(openNode.begin(),openNode.end(),f_comp());
-
-            //vector<Node*>::iterator result = min_element(openNode.begin(),openNode.end(),f_comp());
-
-            //int currentpos = distance(openNode.begin(),result);
+            //--- Méthode (1) Trier openNode !
+            /*
+            if (openNode.size()>1) sort(openNode.begin(),openNode.end(), f_comp());
 
             current = openNode[0];
-
-            // supprimer current de Open
-            //openNode.erase(openNode.begin()+currentpos);
             openNode.erase(openNode.begin());
+
+            */
+
+            //--- Méthode (2) Cherche le plus petit F dans la liste Open
+            current = *min_element(openNode.begin(),openNode.end(),f_comp());
+            vector<Node>::iterator result = min_element(openNode.begin(),openNode.end(),f_comp());
+            int currentpos = distance(openNode.begin(),result);
+            //cout << " Parent = " << &current << endl ;
+            openNode.erase(openNode.begin()+currentpos);
+
+
             // ajout current dans Closed
             closedNode.push_back(current);
 
-            // Ajout des successor ! 8 x cases adjacent a tester !
-            for (int i(0); i < 8; i++)
+            // Ajout des successor ! 8 x cases adjacent a tester ou 4 pour supprimer diagonale!
+            for (int i(0); i < 4; i++)
             {
 
                 int x = (adj[i].x);
@@ -274,7 +279,9 @@ int main(void)
 
                 sucNode.parentX = current.x;
                 sucNode.parentY = current.y;
-                sucNode.parent = &current;
+                vector<Node>::iterator itor = openNode.begin()+currentpos;
+                sucNode.parent = &(*itor);
+                //cout << " Parent = " << sucNode.parent << endl ;
 
                 // Si successor sort de la map on passe a la case suivante !
                 if (sucX<0 || sucX>MAPW || sucY<0 || sucY>MAPH) continue;
@@ -382,13 +389,62 @@ int main(void)
         }
 
         // Display Final Path !
-        if (goal)
+        if (goal && !trace)
         {
 
+            Node tmp = current;
 
+            Vec2D prec;
+            Vec2D n;
+
+            n.x = arrx;
+            n.y = arry;
+
+            myPath.clear();
+
+            while (prec.x != -1)
+            {
+                n.x = prec.x;
+                n.y = prec.y;
+
+                myPath.push_back(n);
+
+                // Search the parent in closed list
+
+                for (int i(0); i < closedNode.size(); i++)
+                {
+                    if (n.x == closedNode[i].x && n.y == closedNode[i].y)
+                    {
+                        tmp.x = closedNode[i].parentX;
+                        tmp.y = closedNode[i].parentY;
+
+
+                    }
+                }
+
+                prec.x = tmp.x;
+                prec.y = tmp.y;
+
+
+            }
+            trace = true;
         }
 
 
+        for (int i(1); i < myPath.size(); i++)
+        {
+            if (i>myPath.size()-2) break;
+            int os(cs/2);
+            int x1(myPath[i].x*cs+os);
+            int y1(myPath[i].y*cs+os);
+            int x2(myPath[i+1].x*cs+os);
+            int y2(myPath[i+1].y*cs+os);
+
+            line(buffer,x1,y1,x2,y2,makecol(250,250,0));
+            circlefill(buffer,x1,y1,2,makecol(250,250,250));
+
+            //cout << "myPath = " << myPath[i].x << " , " << myPath[i].y << endl;
+        }
 
         rect (buffer, current.x*cs+1,current.y*cs+1,current.x*cs+cs-1,current.y*cs+cs-1,makecol(0,150,250));
 
@@ -398,7 +454,7 @@ int main(void)
         unsigned int n(0);
         for (it = closedNode.begin(); it!=closedNode.end(); ++it)
         {
-            textprintf_ex (buffer, font, 2, n*10+2,makecol(250,120,250),-1,"%i,%i=%i",(*it).x,(*it).y,(*it).f);
+            textprintf_ex (buffer, font, 2, n*10+2,makecol(250,120,250),-1,"%i,%i=%i, Address = %i",(*it).x,(*it).y,(*it).f, &(*it));
             n++;
         }
 
