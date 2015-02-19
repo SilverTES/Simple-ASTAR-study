@@ -9,6 +9,7 @@
 
 #include <list>
 #include <vector>
+#include <algorithm>
 
 #include <allegro.h>
 #include <winalleg.h>
@@ -20,39 +21,52 @@ const int SCRY(600);
 
 const int MAPW(40);
 const int MAPH(30);
-const int cs = 40; // Taille des cases
+const int cs = 20; // Taille des cases
 
 struct Node
 {
-    int id;
-    Node * parent;
     int x;
     int y;
     int g;
     int h;
     int f;
-
-    Node () : parent(0){}
-    Node (int pX, int pY, Node * pParent = 0) : x(pX), y(pY), parent(pParent), id(y * MAPW + x), g(0), h(0) {};
-
-    int getF() { return g+h;}
-    int ManHattanDistance (Node * nodeEnd)
-    {
-        int x = fabs(this->x - nodeEnd->x);
-        int y = fabs(this->x - nodeEnd->x);
-        return x+y;
-    }
-
-    bool hasParent() { return parent != NULL;}
-
+    int parentX;
+    int parentY;
+    Node * parent;
 };
 
+struct f_comp
+{
+    bool operator()(const Node a, const Node b) const
+    {
+        return a.f < b.f;
+    }
+};
+
+struct Vec2D
+{
+    int x;
+    int y;
+};
+
+Vec2D adj[8];
 
 int depx(0);
 int depy(0);
 int arrx(0);
 int arry(0);
 
+bool key_f5;
+bool key_f1;
+bool key_del;
+
+bool quit = false;
+bool goal = false;
+bool noSolution = false;
+bool key_enter = false;
+
+Node current;
+Node sucNode;
 
 BITMAP * buffer(NULL);
 
@@ -60,6 +74,11 @@ char myMap[MAPH][MAPW] = {{0}};
 
 ifstream loadFile;
 ofstream saveFile;
+
+vector <Node> openNode;
+vector <Node> closedNode;
+vector <Node> goalPath;
+vector <Node>::iterator it;
 
 void draw_map();
 bool map_walkable(int x, int y);
@@ -78,59 +97,52 @@ bool map_walkable(int x, int y)
 
 int Distance(int px, int py, int goalX, int goalY)
 {
-    return abs(px - goalX) + abs(py - goalY);
+    return 100*(fabs(px - goalX) + fabs(py - goalY));
 }
-/*
-bool FindPath (int startX, int startY, int goalX, int goalY, vector<Node> &path)
+
+bool isGoal (int x, int y)
 {
+    if (x==arrx && y==arry)
+        return true;
+    else
+        return false;
 
-    path.clear();
+}
 
-    bool searching = true;
-    bool doOnce = true;  // run only once ! s'execute qu'une fois !
-    Node start = new Node(startX,startY);
-    Node goal = new Node(goalX,goalY);
-    Node current;
-
-    vector <Node*> openList;
-    vector <Node*> closedList;
-
-    unsigned int n = 0;
-
-    current = start;
-    openList.push_back(start); // Add the start point in openList
-
-    while (searching)
+bool isClosedNode(int sucX, int sucY)
+{
+    for (int i(0); i < closedNode.size(); i++)
     {
-        if (doOnce)
+        //cout << "sucX = " << sucX << " = "<< closedNode[i].x << " " << "sucY = " << sucY << " = "<< closedNode[i].y << endl;
+        if (sucX == closedNode[i].x && sucY == closedNode[i].y)
         {
-            // 1 --- Check if goal is the same as starting point !
-            if (goalX == startX && goalY == startY) return false;
-
-            // 2 --- Check if target is walkable !
-            if (!map_walkable(goalX,goalY)) return false;
-            doOnce = true;
+            return true;
         }
-
-        // 3 --- Put current Node in Closed list, Remove current of Open list
-
-        if (current.x == startX && current.y == startY ) // first node to explore is start Node
-        {
-            closedList.push_back(current);
-        }
-        else
-        {
-            // search the lowest F !
-
-        }
-
-
-
     }
-
     return false;
 }
-*/
+
+bool isOpenNode(int sucX, int sucY)
+{
+    for (int i(0); i < openNode.size(); i++)
+    {
+        if (sucX == openNode[i].x && sucY ==openNode[i].y)
+        {
+            if (sucNode.f>openNode[i].f)
+            {
+                return true;
+            }
+            else
+            {
+                //openNode.erase(openNode.begin()+i);
+                //openNode[i].parent = &current;
+                return true;
+            }
+        }
+
+    }
+    return false;
+}
 
 int main(void)
 {
@@ -156,21 +168,38 @@ int main(void)
     }
     loadFile.close();
 
-    bool key_f5;
-    bool key_f1;
-    bool key_del;
+    adj[0] = { 0,-1}; // U
+    adj[1] = { 0, 1}; // D
+    adj[2] = {-1, 0}; // L
+    adj[3] = { 1, 0}; // R
+
+    adj[4] = {-1,-1}; // UL
+    adj[5] = {-1, 1}; // DL
+    adj[6] = { 1,-1}; // UR
+    adj[7] = { 1, 1}; // DR
 
     depx = 2;
     depy = 2;
 
-    arrx = 18;
-    arry = 13;
+    arrx = 37;
+    arry = 27;
 
-    list <Node> openNode;
-    Node current(depx,depy);
-    list <Node>::iterator it;
+    current.x = depx;
+    current.y = depy;
+    current.parentX = -1;
+    current.parentY = -1;
+    current.parent = NULL;
 
-    while (!key[KEY_ESC])
+    current.g = 0;
+    current.h = Distance(depx,depy,arrx,arry);
+    current.f = current.g + current.h;
+
+    openNode.clear();
+    closedNode.clear();
+
+    openNode.push_back(current);
+
+    while (!quit)
     {
 
         int selx = mouse_x/cs;
@@ -179,53 +208,99 @@ int main(void)
         int posx = selx*cs;
         int posy = sely*cs;
 
-        if (selx>-1 && sely>-1 && selx<MAPW && sely<MAPH)
+
+        if (mouse_b & 1)
         {
-            if (mouse_b & 1)
-            {
-                myMap[sely][selx] = 1;
-            }
-            if (mouse_b & 2)
-            {
-                myMap[sely][selx] = 0;
-            }
+            myMap[sely][selx] = 1;
+
+        }
+        if (mouse_b & 2)
+        {
+            myMap[sely][selx] = 0;
         }
 
-        // Press Enter to Search Path !
-        if (key[KEY_ENTER])
+        if (key[KEY_ESC]) quit = true;
+
+        // Algo Pathfinding en action !
+
+
+        if (!key[KEY_ENTER]) key_enter = false;
+        if (key[KEY_RCONTROL]) key_enter = false;
+
+        if (!goal && key[KEY_ENTER] && !key_enter && !noSolution)
         {
-            cout << "\n -- Search Mode On -- \n";
-            cout << " Press [ <- ] to quit search !\n";
-
-            //while (!key[KEY_BACKSPACE])
-            //{
-                unsigned int n(0);
-
-                for (int x = -1; x < 2; x++)
-                {
-                    for (int y = -1; y < 2; y++)
-                    {
-                        if (x==0 && y==0) continue;
-
-                        Node pNode(current.x,current.y);
-                        pNode.x = current.x + x;
-                        pNode.y = current.y + y;
-                        if (x==0 || y==0) pNode.g = 10; else pNode.g = 14;
-                        pNode.h = Distance(pNode.x, pNode.y, arrx, arry);
-                        pNode.f = pNode.g + pNode.h;
-
-                        openNode.push_back(pNode);
-
-                        cout << n << "= "<< pNode.x << "," << pNode.y << endl ;
-                        n++;
-                    }
-                }
-
-                // récupération node avec le plus petit F !
+            key_enter = true;
+            // Si openList vide -> Pas de solution !
+            if (openNode.empty())
+            {
+                cout << " No solution " << endl ;
+                noSolution = true;
+            }
 
 
-            //}
-            cout << "\n -- Search Mode Off -- \n";
+            // Trier openNode !
+            if (openNode.size()>1) sort(openNode.begin(),openNode.end(), f_comp());
+
+            // cherche le F le plus faible !
+
+            //current = *min_element(openNode.begin(),openNode.end(),f_comp());
+
+            //vector<Node*>::iterator result = min_element(openNode.begin(),openNode.end(),f_comp());
+
+            //int currentpos = distance(openNode.begin(),result);
+
+            current = openNode[0];
+
+            // supprimer current de Open
+            //openNode.erase(openNode.begin()+currentpos);
+            openNode.erase(openNode.begin());
+            // ajout current dans Closed
+            closedNode.push_back(current);
+
+            // Ajout des successor ! 8 x cases adjacent a tester !
+            for (int i(0); i < 8; i++)
+            {
+
+                int x = (adj[i].x);
+                int y = (adj[i].y);
+
+                int sucX(current.x+x);
+                int sucY(current.y+y);
+
+                sucNode.x = sucX;
+                sucNode.y = sucY;
+                // Si succesor est dans CLosed , si oui on passe a la case suivante!
+                if (isClosedNode(sucX,sucY)) continue;
+
+                sucNode.parentX = current.x;
+                sucNode.parentY = current.y;
+                sucNode.parent = &current;
+
+                // Si successor sort de la map on passe a la case suivante !
+                if (sucX<0 || sucX>MAPW || sucY<0 || sucY>MAPH) continue;
+
+                // Si succesor est dans obstacle on passe !
+                if (!map_walkable(sucX,sucY)) continue;
+
+                // Goal !! Si but atteint alors on quit la boucle !
+                if (sucX==arrx && sucY==arry) { goal = true;}
+
+
+                if (x==0 || y==0) sucNode.g = 10; else sucNode.g = 14; // calcul du coup du chemin parent -> successor , 1O tour droit , 14 en diagonale !
+
+                sucNode.g = current.g+sucNode.g;
+                sucNode.h = Distance(sucX, sucY, arrx, arry);
+
+                sucNode.f = sucNode.g+sucNode.h;
+
+                // Test si node successor a un meilleur F que le node dans Open !
+                if (isOpenNode(sucX,sucY)) continue;
+
+                openNode.push_back(sucNode);
+
+            }
+
+
         }
 
         // Press DEL to clear map !
@@ -274,14 +349,66 @@ int main(void)
             int g  = (*it).g;
             int h  = (*it).h;
 
-            rectfill (buffer, px*cs,py*cs,px*cs+cs,py*cs+cs,makecol(0,200,10));
-            textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,0),-1,"(%i)",f);
-            textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(255,100,0),-1,"%i",g);
-            textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(255,0,100),-1,"%i",h);
+            rectfill (buffer, px*cs,py*cs,px*cs+cs,py*cs+cs,makecol(0,100,50));
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,200),-1,"%i",f);
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(120,200,0),-1,"%i",g);
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(0,120,200),-1,"%i",h);
+
+        }
+        // Display ClosedNode !
+        for (int i(1); i < closedNode.size(); i++)
+        {
+            int os(cs/2);
+            int x1(closedNode[i].x*cs+os);
+            int y1(closedNode[i].y*cs+os);
+            int x2(closedNode[i].parentX*cs+os);
+            int y2(closedNode[i].parentY*cs+os);
+
+            line(buffer,x1,y1,x2,y2,makecol(250,150,0));
+        }
+
+        for (it = closedNode.begin(); it!=closedNode.end(); ++it)
+        {
+            int px = (*it).x;
+            int py = (*it).y;
+            int f  = (*it).f;
+            int g  = (*it).g;
+            int h  = (*it).h;
+
+            rectfill (buffer, px*cs+8,py*cs+8,px*cs+cs-8,py*cs+cs-8,makecol(200,200,0));
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,200),-1,"%i",f);
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(120,200,0),-1,"%i",g);
+            //textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(0,120,200),-1,"%i",h);
+        }
+
+        // Display Final Path !
+        if (goal)
+        {
+
 
         }
 
+
+
+        rect (buffer, current.x*cs+1,current.y*cs+1,current.x*cs+cs-1,current.y*cs+cs-1,makecol(0,150,250));
+
         draw_map();
+
+/*
+        unsigned int n(0);
+        for (it = closedNode.begin(); it!=closedNode.end(); ++it)
+        {
+            textprintf_ex (buffer, font, 2, n*10+2,makecol(250,120,250),-1,"%i,%i=%i",(*it).x,(*it).y,(*it).f);
+            n++;
+        }
+
+        n = 0;
+        for (it = openNode.begin(); it!=openNode.end(); ++it)
+        {
+            textprintf_ex (buffer, font, 720, n*10+2,makecol(200,120,0),-1,"%i,%i=%i",(*it).x,(*it).y,(*it).f);
+            n++;
+        }
+*/
 
         int c = cs/2;
         circlefill (buffer,depx*cs+c,depy*cs+c,8,makecol(0,150,50));
@@ -318,7 +445,7 @@ void draw_map()
 
             if (myMap[j][i]==1)
             {
-                rectfill (buffer,cx,cy,cx+cs,cy+cs,makecol(0,150,200));
+                rectfill (buffer,cx,cy,cx+cs,cy+cs,makecol(0,100,120));
             }
             rect (buffer,cx,cy,cx+cs,cy+cs,makecol(0,50,100));
         }

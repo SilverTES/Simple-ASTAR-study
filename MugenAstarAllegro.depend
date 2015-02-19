@@ -14,7 +14,7 @@
 	<allegro.h>
 	<winalleg.h>
 
-1424099936 source:e:\project\programming\mugenastarallegro\main.cpp
+1424355708 source:e:\project\programming\mugenastarallegro\main.cpp
 	<iostream>
 	<iomanip>
 	<cstdio>
@@ -23,6 +23,7 @@
 	<math.h>
 	<list>
 	<vector>
+	<algorithm>
 	<allegro.h>
 	<winalleg.h>
 
