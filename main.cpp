@@ -304,6 +304,9 @@ int main(void)
             // ajout current dans Closed
             closedNode.push_back(current);
 
+            // Goal !! Si but atteint alors on quit la boucle !
+            if (current.x==arrx && current.y==arry) { goal = true;}
+
             // Ajout des successor ! 8 x cases adjacent a tester ou 4 pour supprimer diagonale!
             for (int i(0); i < 8; i++)
             {
@@ -336,8 +339,7 @@ int main(void)
                 if (i==5 && (!map_walkable(current.x-1,current.y) || !map_walkable(current.x,current.y+1))) continue;
                 if (i==7 && (!map_walkable(current.x+1,current.y) || !map_walkable(current.x,current.y+1))) continue;
 
-                // Goal !! Si but atteint alors on quit la boucle !
-                if (sucX==arrx && sucY==arry) { goal = true;}
+
 
 
                 if (x==0 || y==0) sucNode.g = 10; else sucNode.g = 14; // calcul du coup du chemin parent -> successor , 1O tour droit , 14 en diagonale !
@@ -440,7 +442,7 @@ int main(void)
         // Display Final Path !
         if (goal && !trace)
         {
-            cout << " Tracer le chemin..."<< endl;
+            //cout << " Tracer le chemin..."<< endl;
             Node tmp = closedNode.back();
 
             Vec2D prec{0};
@@ -473,7 +475,7 @@ int main(void)
                 prec.y = tmp.y;
 
             }
-            cout << " myPathSize = " << myPath.size() << endl;
+            //cout << " myPathSize = " << myPath.size() << endl;
             trace=true;
         }
         if (trace)
