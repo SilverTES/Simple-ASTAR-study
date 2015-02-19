@@ -97,7 +97,8 @@ bool map_walkable(int x, int y)
 
 int Distance(int px, int py, int goalX, int goalY)
 {
-    return 10*(fabs(px - goalX) + fabs(py - goalY));
+    //return 10*(fabs(px - goalX) + fabs(py - goalY));
+    return sqrt(pow((px - goalX), 2) + pow((py - goalY), 2));
 }
 
 bool isGoal (int x, int y)
