@@ -32,7 +32,6 @@ struct Node
     int f;
     int parentX;
     int parentY;
-    const struct Node * parent;
 };
 
 struct f_comp
@@ -98,7 +97,7 @@ bool map_walkable(int x, int y)
 
 int Distance(int px, int py, int goalX, int goalY)
 {
-    return 100*(fabs(px - goalX) + fabs(py - goalY));
+    return 10*(fabs(px - goalX) + fabs(py - goalY));
 }
 
 bool isGoal (int x, int y)
@@ -135,8 +134,13 @@ bool isOpenNode(int sucX, int sucY)
             }
             else
             {
+                // Si successeur a la même place du Node dans Open , alors le Successeur prends la place du Node !!!
                 //openNode.erase(openNode.begin()+i);
+
                 //openNode[i].parent = &current;
+                openNode[i].parentX = current.x;
+                openNode[i].parentY = current.y;
+
                 return true;
             }
         }
@@ -179,8 +183,8 @@ int main(void)
     adj[6] = { 1,-1}; // UR
     adj[7] = { 1, 1}; // DR
 
-    depx = 2;
-    depy = 2;
+    depx = 1;
+    depy = 1;
 
     arrx = 37;
     arry = 27;
@@ -189,7 +193,6 @@ int main(void)
     current.y = depy;
     current.parentX = -1;
     current.parentY = -1;
-    current.parent = NULL;
 
     current.g = 0;
     current.h = Distance(depx,depy,arrx,arry);
@@ -214,7 +217,20 @@ int main(void)
 
         if (mouse_b & 1)
         {
-            myMap[sely][selx] = 1;
+            if (key[KEY_S]) // Clic + S for place Start !
+            {
+                depx = selx;
+                depy = sely;
+            }
+            else if (key[KEY_G]) // Clic + G for place Goal !
+            {
+                arrx = selx;
+                arry = sely;
+            }
+            else
+            {
+                myMap[sely][selx] = 1;
+            }
 
         }
         if (mouse_b & 2)
@@ -233,7 +249,6 @@ int main(void)
             current.y = depy;
             current.parentX = -1;
             current.parentY = -1;
-            current.parent = NULL;
 
             current.g = 0;
             current.h = Distance(depx,depy,arrx,arry);
@@ -241,12 +256,14 @@ int main(void)
 
             openNode.clear();
             closedNode.clear();
+            myPath.clear();
 
             openNode.push_back(current);
 
             trace = false;
             goal = false;
             noSolution = false;
+
         }
 
 
@@ -261,6 +278,8 @@ int main(void)
             {
                 cout << " No solution " << endl ;
                 noSolution = true;
+                return -999;
+
             }
 
             // cherche le F le plus faible !
@@ -302,15 +321,20 @@ int main(void)
 
                 sucNode.parentX = current.x;
                 sucNode.parentY = current.y;
-                vector<Node>::iterator itor = openNode.begin()+currentpos;
-                sucNode.parent = &(*itor);
-                //cout << " Parent = " << sucNode.parent << endl ;
 
                 // Si successor sort de la map on passe a la case suivante !
                 if (sucX<0 || sucX>MAPW || sucY<0 || sucY>MAPH) continue;
 
                 // Si succesor est dans obstacle on passe !
                 if (!map_walkable(sucX,sucY)) continue;
+
+                // Amélioration Algo , on skip les chemin diagonaux si obstacle entre Current et Successor !
+
+                if (i==4 && (!map_walkable(current.x-1,current.y) || !map_walkable(current.x,current.y-1))) continue;
+                if (i==6 && (!map_walkable(current.x+1,current.y) || !map_walkable(current.x,current.y-1))) continue;
+
+                if (i==5 && (!map_walkable(current.x-1,current.y) || !map_walkable(current.x,current.y+1))) continue;
+                if (i==7 && (!map_walkable(current.x+1,current.y) || !map_walkable(current.x,current.y+1))) continue;
 
                 // Goal !! Si but atteint alors on quit la boucle !
                 if (sucX==arrx && sucY==arry) { goal = true;}
@@ -379,7 +403,7 @@ int main(void)
             int g  = (*it).g;
             int h  = (*it).h;
 
-            rectfill (buffer, px*cs,py*cs,px*cs+cs,py*cs+cs,makecol(0,100,50));
+            rect (buffer, px*cs+4,py*cs+4,px*cs+cs-4,py*cs+cs-4,makecol(0,150,200));
             //textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,200),-1,"%i",f);
             //textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(120,200,0),-1,"%i",g);
             //textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(0,120,200),-1,"%i",h);
@@ -394,8 +418,10 @@ int main(void)
             int x2(closedNode[i].parentX*cs+os);
             int y2(closedNode[i].parentY*cs+os);
 
-            line(buffer,x1,y1,x2,y2,makecol(250,150,0));
+            line(buffer,x1,y1,x2,y2,makecol(150,50,0));
+
         }
+
 
         for (it = closedNode.begin(); it!=closedNode.end(); ++it)
         {
@@ -405,7 +431,7 @@ int main(void)
             int g  = (*it).g;
             int h  = (*it).h;
 
-            rectfill (buffer, px*cs+8,py*cs+8,px*cs+cs-8,py*cs+cs-8,makecol(200,200,0));
+            rectfill (buffer, px*cs+8,py*cs+8,px*cs+cs-8,py*cs+cs-8,makecol(120,50,0));
             //textprintf_ex (buffer, font, px*cs+2, py*cs+2,makecol(255,200,200),-1,"%i",f);
             //textprintf_ex (buffer, font, px*cs+2, py*cs+12,makecol(120,200,0),-1,"%i",g);
             //textprintf_ex (buffer, font, px*cs+2, py*cs+22,makecol(0,120,200),-1,"%i",h);
@@ -414,16 +440,14 @@ int main(void)
         // Display Final Path !
         if (goal && !trace)
         {
+            cout << " Tracer le chemin..."<< endl;
+            Node tmp = closedNode.back();
 
-            Node tmp = current;
-
-            Vec2D prec;
-            Vec2D n;
+            Vec2D prec{0};
+            Vec2D n{0};
 
             n.x = arrx;
             n.y = arry;
-
-            myPath.clear();
 
             while (prec.x != -1)
             {
@@ -448,12 +472,10 @@ int main(void)
                 prec.x = tmp.x;
                 prec.y = tmp.y;
 
-
             }
-            trace = true;
+            cout << " myPathSize = " << myPath.size() << endl;
+            trace=true;
         }
-
-
         if (trace)
         {
             for (int i(1); i < myPath.size(); i++)
@@ -528,9 +550,10 @@ void draw_map()
 
             if (myMap[j][i]==1)
             {
-                rectfill (buffer,cx,cy,cx+cs,cy+cs,makecol(0,100,120));
+                rectfill (buffer,cx,cy,cx+cs,cy+cs,makecol(80,100,80));
+                rect (buffer,cx,cy,cx+cs,cy+cs,makecol(0,50,100));
             }
-            rect (buffer,cx,cy,cx+cs,cy+cs,makecol(0,50,100));
+
         }
     }
 
