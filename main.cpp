@@ -226,6 +226,29 @@ int main(void)
 
         // Algo Pathfinding en action !
 
+        if (key[KEY_BACKSPACE])  // Reset pathFinding;
+        {
+
+            current.x = depx;
+            current.y = depy;
+            current.parentX = -1;
+            current.parentY = -1;
+            current.parent = NULL;
+
+            current.g = 0;
+            current.h = Distance(depx,depy,arrx,arry);
+            current.f = current.g + current.h;
+
+            openNode.clear();
+            closedNode.clear();
+
+            openNode.push_back(current);
+
+            trace = false;
+            goal = false;
+            noSolution = false;
+        }
+
 
         if (!key[KEY_ENTER]) key_enter = false;
         if (key[KEY_RCONTROL]) key_enter = false;
@@ -263,7 +286,7 @@ int main(void)
             closedNode.push_back(current);
 
             // Ajout des successor ! 8 x cases adjacent a tester ou 4 pour supprimer diagonale!
-            for (int i(0); i < 4; i++)
+            for (int i(0); i < 8; i++)
             {
 
                 int x = (adj[i].x);
@@ -431,20 +454,24 @@ int main(void)
         }
 
 
-        for (int i(1); i < myPath.size(); i++)
+        if (trace)
         {
-            if (i>myPath.size()-2) break;
-            int os(cs/2);
-            int x1(myPath[i].x*cs+os);
-            int y1(myPath[i].y*cs+os);
-            int x2(myPath[i+1].x*cs+os);
-            int y2(myPath[i+1].y*cs+os);
+            for (int i(1); i < myPath.size(); i++)
+            {
+                if (i>myPath.size()-2) break;
+                int os(cs/2);
+                int x1(myPath[i].x*cs+os);
+                int y1(myPath[i].y*cs+os);
+                int x2(myPath[i+1].x*cs+os);
+                int y2(myPath[i+1].y*cs+os);
 
-            line(buffer,x1,y1,x2,y2,makecol(250,250,0));
-            circlefill(buffer,x1,y1,2,makecol(250,250,250));
+                line(buffer,x1,y1,x2,y2,makecol(250,250,0));
+                circlefill(buffer,x1,y1,2,makecol(250,250,250));
 
-            //cout << "myPath = " << myPath[i].x << " , " << myPath[i].y << endl;
+                //cout << "myPath = " << myPath[i].x << " , " << myPath[i].y << endl;
+            }
         }
+
 
         rect (buffer, current.x*cs+1,current.y*cs+1,current.x*cs+cs-1,current.y*cs+cs-1,makecol(0,150,250));
 
